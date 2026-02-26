@@ -1,0 +1,26 @@
+-- BANCO DE LA PLACETA - ACTUALIZACIÓN SCHEMA SISTEMA DE TARJETAS
+
+-- Tabla de Tarjetas SIDS
+CREATE TABLE IF NOT EXISTS cards (
+    id VARCHAR(50) PRIMARY KEY,
+    account_id VARCHAR(50) NOT NULL,
+    pan VARCHAR(16) UNIQUE NOT NULL,
+    expiry_date VARCHAR(5) NOT NULL, -- MM/YY
+    cvv VARCHAR(3) NOT NULL,
+    pin VARCHAR(4) NOT NULL,
+    holder_name VARCHAR(100) NOT NULL,
+    type ENUM('DEBIT', 'CREDIT') DEFAULT 'DEBIT',
+    status ENUM('ACTIVE', 'FROZEN', 'CANCELLED') DEFAULT 'ACTIVE',
+    design TEXT, -- Almacena base64 o URL del diseño personalizado
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+-- Actualizar tabla de transacciones para soportar IVA segregado y metadatos de tarjeta
+ALTER TABLE transactions 
+ADD COLUMN IF NOT EXISTS tax DECIMAL(15, 2) DEFAULT 0.00,
+MODIFY COLUMN transaction_type ENUM('TRANSFER', 'PAYROLL', 'TAX', 'MARKET_BUY', 'PLACEZUM', 'CARD_PAYMENT', 'IRM_TAX', 'INVESTMENT') NOT NULL;
+
+-- Asegurar Índices para velocidad de TPV
+CREATE INDEX idx_card_pan ON cards(pan);
+CREATE INDEX idx_card_auth ON cards(pan, cvv, pin);

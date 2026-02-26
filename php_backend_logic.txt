@@ -1,0 +1,86 @@
+<?php
+/**
+ * BANCO DE LA PLACETA - LÓGICA DE PROCESAMIENTO DE TARJETAS (PHP)
+ * Este archivo contiene los fragmentos de lógica para implementar en el servidor real.
+ */
+
+// 1. FUNCIÓN PARA PROCESAR PAGO CON TARJETA
+function processCardPayment($pan, $cvv, $pin, $amount, $merchantId, $pdo) {
+    $vatRate = 0.12; // 12%
+    $totalAmount = $amount * (1 + $vatRate);
+    $taxAmount = $amount * $vatRate;
+
+    try {
+        $pdo->beginTransaction();
+
+        // Validar Tarjeta
+        $stmt = $pdo->prepare("SELECT account_id, status FROM cards WHERE pan = ? AND cvv = ? AND pin = ?");
+        $stmt->execute([$pan, $cvv, $pin]);
+        $card = $stmt->fetch();
+
+        if (!$card) {
+            throw new Exception("Identificación de tarjeta fallida.");
+        }
+        if ($card['status'] !== 'ACTIVE') {
+            throw new Exception("La tarjeta seleccionada está bloqueada.");
+        }
+
+        // Validar Saldo de la Cuenta vinculada
+        $stmt = $pdo->prepare("SELECT id, iban, balance FROM accounts WHERE id = ? FOR UPDATE");
+        $stmt->execute([$card['account_id']]);
+        $account = $stmt->fetch();
+
+        if ($account['balance'] < $totalAmount) {
+            throw new Exception("Fondos insuficientes en la cuenta vinculada.");
+        }
+
+        // Obtener Cuenta del Comercio
+        $stmt = $pdo->prepare("SELECT iban FROM companies WHERE id = ?");
+        $stmt->execute([$merchantId]);
+        $merchant = $stmt->fetch();
+
+        if (!$merchant) {
+            throw new Exception("Comercio no registrado en SIDS.");
+        }
+
+        // --- MOVIMIENTOS CONTABLES ---
+        
+        // 1. Retirar del Cliente (Total)
+        $pdo->prepare("UPDATE accounts SET balance = balance - ? WHERE id = ?")
+            ->execute([$totalAmount, $account['id']]);
+
+        // 2. Ingresar al Comercio (Base)
+        $pdo->prepare("UPDATE accounts SET balance = balance + ? WHERE iban = ?")
+            ->execute([$amount, $merchant['iban']]);
+
+        // 3. Ingresar al Tesoro Público (IVA)
+        $stateIban = "PL0000000000000000000000";
+        $pdo->prepare("UPDATE accounts SET balance = balance + ? WHERE iban = ?")
+            ->execute([$taxAmount, $stateIban]);
+
+        // Registrar Log
+        $txId = "CPAY-" . time();
+        $stmt = $pdo->prepare("INSERT INTO transactions (id, amount, sender_iban, receiver_iban, description, type, tax, status) VALUES (?, ?, ?, ?, ?, 'CARD_PAYMENT', ?, 'COMPLETED')");
+        $stmt->execute([$txId, $totalAmount, $account['iban'], $merchant['iban'], "Pago con Tarjeta SIDS", $taxAmount]);
+
+        $pdo->commit();
+        return ["success" => true, "tx_id" => $txId];
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ["success" => false, "error" => $e->getMessage()];
+    }
+}
+
+// 2. FUNCIÓN PARA EMISIÓN DE TARJETA
+function issueNewCard($accountId, $holderName, $design, $pin, $pdo) {
+    $pan = "";
+    for($i=0; $i<16; $i++) $pan .= rand(0, 9);
+    $cvv = rand(100, 999);
+    $expiry = date('m/y', strtotime('+5 years'));
+    $id = "card-" . uniqid();
+
+    $stmt = $pdo->prepare("INSERT INTO cards (id, account_id, pan, expiry_date, cvv, pin, holder_name, design, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')");
+    return $stmt->execute([$id, $accountId, $pan, $expiry, $cvv, $pin, $holderName, $design]);
+}
+?>

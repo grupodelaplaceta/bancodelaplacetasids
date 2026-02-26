@@ -1,0 +1,58 @@
+-- BANCO DE LA PLACETA - DATABASE SCHEMA (MYSQL COMPATIBLE)
+-- CAPÍTULO 1: GESTIÓN ADMINISTRATIVA
+
+-- 1. Tabla de Usuarios (Ciudadanos)
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    dip VARCHAR(20) UNIQUE NOT NULL, -- Documento Identidad Placeta
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('CITIZEN', 'ADMIN', 'COMPANY') DEFAULT 'CITIZEN',
+    verified BOOLEAN DEFAULT FALSE,
+    avatar_url TEXT,
+    birth_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Tabla de Cuentas Bancarias
+CREATE TABLE IF NOT EXISTS accounts (
+    id VARCHAR(50) PRIMARY KEY,
+    owner_id VARCHAR(50) NOT NULL,
+    alias VARCHAR(100) NOT NULL,
+    iban VARCHAR(24) UNIQUE NOT NULL, -- PL + 22 dígitos
+    balance DECIMAL(15,2) DEFAULT 0.00,
+    type ENUM('PERSONAL', 'BUSINESS', 'SAVINGS', 'STATE') NOT NULL,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 3. Tabla de Transacciones (Ledger)
+CREATE TABLE IF NOT EXISTS transactions (
+    id VARCHAR(50) PRIMARY KEY,
+    amount DECIMAL(15,2) NOT NULL,
+    sender_iban VARCHAR(24),
+    receiver_iban VARCHAR(24) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) NOT NULL,
+    tax DECIMAL(15,2) DEFAULT 0.00,
+    status ENUM('COMPLETED', 'PENDING', 'FAILED', 'REVERTED') DEFAULT 'COMPLETED',
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Tabla de Tarjetas SIDS
+CREATE TABLE IF NOT EXISTS cards (
+    id VARCHAR(50) PRIMARY KEY,
+    account_id VARCHAR(50) NOT NULL,
+    pan VARCHAR(16) UNIQUE NOT NULL,
+    expiry_date VARCHAR(5) NOT NULL,
+    cvv VARCHAR(3) NOT NULL,
+    pin VARCHAR(4) NOT NULL,
+    holder_name VARCHAR(100) NOT NULL,
+    status ENUM('ACTIVE', 'FROZEN', 'CANCELLED') DEFAULT 'ACTIVE',
+    design TEXT,
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+-- Índices de Auditoría
+CREATE INDEX idx_user_dip ON users(dip);
+CREATE INDEX idx_acc_iban ON accounts(iban);
+CREATE INDEX idx_tx_ibans ON transactions(sender_iban, receiver_iban);

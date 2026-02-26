@@ -1,0 +1,16 @@
+-- TABLA DE LOTERÍAS / LOOTBOXES v2.0
+CREATE TABLE IF NOT EXISTS loot_boxes (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT, -- NULL si es oficial de la Junta
+    name TEXT NOT NULL,
+    description TEXT,
+    price DECIMAL(15,2) NOT NULL,
+    prize_value DECIMAL(15,2) NOT NULL,
+    status TEXT DEFAULT 'PENDING', -- PENDING, APPROVED
+    color TEXT DEFAULT 'from-slate-700 to-slate-900',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para búsqueda rápida
+CREATE INDEX idx_lottery_owner ON loot_boxes(owner_id);
+CREATE INDEX idx_lottery_status ON loot_boxes(status);
