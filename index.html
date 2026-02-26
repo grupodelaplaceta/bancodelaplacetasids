@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="La Placeta">
+    <meta name="description" content="Banco Digital de La Placeta - Gestión Financiera Integral">
+    <title>Banco de La Placeta — SIDS</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/JhpRVsFQ/FAVI.png" />
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/JhpRVsFQ/FAVI.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json" />
+    <script type="importmap">
+    {
+      "imports": {
+        "@neondatabase/serverless": "https://aistudiocdn.com/@neondatabase/serverless@^1.0.2",
+        "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.5.15",
+        "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+        "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+        "react/": "https://aistudiocdn.com/react@^19.2.1/",
+        "react": "https://aistudiocdn.com/react@^19.2.1",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+        "vite": "https://aistudiocdn.com/vite@^7.2.6",
+        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+        "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2"
+      }
+    }
+    </script>
+  </head>
+  <body class="bg-[#f2f4f8] text-slate-800 selection:bg-violet-600 selection:text-white overflow-x-hidden touch-manipulation">
+    <div id="root"></div>
+    <!-- SDK de PlacetaID Oficial -->
+    <script src="https://junta.vercel.app/placetaid.js"></script>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          console.log('Service Worker supported');
+        });
+      }
+    </script>
+  </body>
+</html>

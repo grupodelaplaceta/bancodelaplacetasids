@@ -1,0 +1,21 @@
+
+{
+  "name": "Banco de La Placeta",
+  "short_name": "La Placeta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/s2s2RdgX/BANCO-DE.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.postimg.cc/s2s2RdgX/BANCO-DE.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

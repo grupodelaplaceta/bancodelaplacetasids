@@ -1,0 +1,161 @@
+-- BANCO DE LA PLACETA - DATABASE SCHEMA & LOGIC
+-- Compatible with MySQL/MariaDB
+
+-- 1. DATABASE SCHEMA
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    dip VARCHAR(20) UNIQUE NOT NULL, -- Documento Identidad Placeta
+    full_name VARCHAR(100) NOT NULL,
+    birth_date DATE NOT NULL, -- For Age Rule 10.6
+    password_hash VARCHAR(255) NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    alias VARCHAR(50), -- e.g. "Personal", "Savings"
+    iban VARCHAR(24) UNIQUE NOT NULL, -- "PL" + 22 digits
+    balance DECIMAL(15, 2) DEFAULT 0.00,
+    type ENUM('PERSONAL', 'BUSINESS', 'STATE') NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE cards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT NOT NULL,
+    pan VARCHAR(16) UNIQUE NOT NULL, -- 16 digit number
+    cvv VARCHAR(3) NOT NULL,
+    expiry_date VARCHAR(5) NOT NULL, -- MM/YY
+    type ENUM('DEBIT', 'CREDIT') NOT NULL,
+    format ENUM('PHYSICAL', 'VIRTUAL') NOT NULL,
+    status ENUM('ACTIVE', 'FROZEN', 'CANCELLED') DEFAULT 'ACTIVE',
+    spending_limit DECIMAL(15, 2) DEFAULT 1000.00,
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
+
+-- NEW: Table for Shared Access & Parental Control
+CREATE TABLE account_access (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT NOT NULL,
+    user_id INT NOT NULL, -- The person being granted access (e.g. Child or Partner)
+    relationship_type ENUM('OWNER', 'CHILD', 'PARTNER', 'OTHER') NOT NULL,
+    access_level ENUM('READ_ONLY', 'FULL_ACCESS') DEFAULT 'READ_ONLY',
+    
+    -- Parental Control Fields
+    can_invest BOOLEAN DEFAULT TRUE, -- Check Rule 10.6 before setting this
+    daily_spending_limit DECIMAL(15,2) DEFAULT NULL,
+    is_frozen BOOLEAN DEFAULT FALSE,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_iban VARCHAR(24),
+    receiver_iban VARCHAR(24) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    tax_amount DECIMAL(15, 2) DEFAULT 0.00,
+    concept VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('PENDING', 'COMPLETED', 'FAILED') DEFAULT 'COMPLETED',
+    transaction_type ENUM('TRANSFER', 'INVESTMENT', 'TAX', 'PAYROLL') NOT NULL
+);
+
+CREATE TABLE investments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP, -- Calculated as start_time + 24 hours
+    status ENUM('ACTIVE', 'COMPLETED', 'CANCELLED') DEFAULT 'ACTIVE',
+    projected_return_rate DECIMAL(5, 2), -- Percentage
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE payroll_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employer_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    base_salary DECIMAL(15, 2) NOT NULL,
+    tax_amount DECIMAL(15, 2) NOT NULL, -- 7.5%
+    net_salary DECIMAL(15, 2) NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employer_id) REFERENCES users(id),
+    FOREIGN KEY (employee_id) REFERENCES users(id)
+);
+
+-- 2. PHP LOGIC SNIPPETS (Conceptual)
+
+/* 
+   LOGIC FOR PAYROLL (Rule 10.5)
+   File: process_payroll.php
+*/
+<?php
+function processPayroll($employerId, $employeeId, $baseSalary, $pdo) {
+    $taxRate = 0.075; // 7.5%
+    $taxAmount = $baseSalary * $taxRate;
+    $netSalary = $baseSalary - $taxAmount;
+    $totalCost = $baseSalary + $taxAmount; // Coste Empresa = Base + 7.5%
+
+    // In this specific rule, usually "Coste de empresa" implies the employer pays EXTRA,
+    // while "Sueldo neto" implies the worker receives LESS.
+    
+    $employerCost = $baseSalary + ($baseSalary * 0.075);
+    $workerNet = $baseSalary - ($baseSalary * 0.075);
+    $totalTaxToState = ($baseSalary * 0.075) * 2; 
+
+    $pdo->beginTransaction();
+    try {
+        // Deduct from Employer
+        // ... Update Account logic ...
+        
+        // Add to Worker
+        // ... Update Account logic ...
+
+        // Add to State Fund
+        // ... Update State Account ...
+
+        // Log
+        $stmt = $pdo->prepare("INSERT INTO payroll_records (employer_id, employee_id, base_salary, tax_amount, net_salary) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$employerId, $employeeId, $baseSalary, $totalTaxToState, $workerNet]);
+        
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+    }
+}
+?>
+
+/*
+   LOGIC FOR PARENTAL CHECK
+   File: check_permission.php
+*/
+<?php
+function canUserInvest($userId, $pdo) {
+    // 1. Check Age (Rule 10.6)
+    $stmt = $pdo->prepare("SELECT birth_date FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    
+    $age = date_diff(date_create($user['birth_date']), date_create('today'))->y;
+    if ($age < 12) return false; // Absolute block
+    
+    // 2. Check Parental Freeze/Block
+    $stmt2 = $pdo->prepare("SELECT can_invest, is_frozen FROM account_access WHERE user_id = ? AND relationship_type = 'CHILD'");
+    $stmt2->execute([$userId]);
+    $control = $stmt2->fetch();
+    
+    if ($control) {
+        if ($control['is_frozen']) return false;
+        if (!$control['can_invest']) return false;
+    }
+    
+    return true;
+}
+?>

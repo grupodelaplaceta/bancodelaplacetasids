@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Diario de La Placeta - Noticias</title>
+    <!-- Importar Fuentes para estilo de Periódico -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+        }
+        
+        header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: -0.05em;
+        }
+
+        #login-area {
+            min-width: 240px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero { grid-template-columns: 1fr; }
+            header { padding: 1rem; }
+        }
+
+        .headline {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            line-height: 1.1;
+            font-weight: 900;
+            margin-bottom: 1rem;
+        }
+        
+        .lead {
+            font-size: 1.2rem;
+            color: #4b5563;
+            margin-bottom: 2rem;
+        }
+
+        .premium-badge {
+            background-color: #000;
+            color: #fff;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .locked-content {
+            filter: blur(5px);
+            user-select: none;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .paywall-overlay {
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">EL DIARIO</div>
+        <div id="login-area">
+            <!-- PlacetaID se inyectará aquí -->
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <article>
+                <span class="premium-badge">Exclusiva</span>
+                <h1 class="headline">El Banco Central de La Placeta anuncia la digitalización completa de la divisa soberana.</h1>
+                <p class="lead">Un movimiento histórico que elimina el efectivo y establece la 'Peseta Digital' como único medio de pago legal a partir del próximo trimestre.</p>
+                <div class="locked-content">
+                    <p>La presidenta del Banco Central, Elena Navarro, detalló en una rueda de prensa de emergencia que "la transición a un sistema puramente digital es un paso inevitable para garantizar la trazabilidad, seguridad y eficiencia de nuestra economía". Según Navarro, la medida permitirá combatir el fraude fiscal y la economía sumergida con una efectividad sin precedentes.</p>
+                    <p>El plan, desarrollado en secreto durante los últimos dos años bajo el nombre en clave 'Operación Fénix', implica que todos los saldos bancarios y activos líquidos se convertirán automáticamente a Pesetas Digitales (PTS). Los ciudadanos podrán operar exclusivamente a través de la aplicación oficial del Banco de La Placeta o los cajeros automáticos habilitados.</p>
+                </div>
+            </article>
+            <aside>
+                <div class="paywall-overlay">
+                    <h2>Contenido Premium</h2>
+                    <p>Accede a este artículo y a todo el contenido exclusivo con tu identidad de La Placeta.</p>
+                    <div id="paywall-login"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    
+    <script src="/placetaid.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sdk = new window.PlacetaID({
+                containerId: 'login-area',
+                onSuccess: (user) => {
+                    document.querySelector('#login-area').innerHTML = `<p>Bienvenido, <strong>${user.name}</strong></p>`;
+                    document.querySelector('.locked-content').classList.remove('locked-content');
+                    document.querySelector('.paywall-overlay').style.display = 'none';
+                }
+            });
+            const sdk2 = new window.PlacetaID({
+                containerId: 'paywall-login',
+                onSuccess: (user) => {
+                    document.querySelector('#login-area').innerHTML = `<p>Bienvenido, <strong>${user.name}</strong></p>`;
+                    document.querySelector('.locked-content').classList.remove('locked-content');
+                    document.querySelector('.paywall-overlay').style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

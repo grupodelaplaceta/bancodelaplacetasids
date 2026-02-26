@@ -1,0 +1,7 @@
+{
+  "name": "Banco de La Placeta — SIDS",
+  "description": "Infraestructura financiera central y gestión administrativa soberana del Grupo La Placeta.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
